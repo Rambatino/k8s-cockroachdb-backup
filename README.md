@@ -26,12 +26,14 @@ This service account will have access to the Storage services in your project
 ### Create the key for this service account
 
 This key will be given to the Kubernetes job to authenticate to your gcloud account
+
     export COCKROACHDB_BACKUP_EMAIl=`gcloud iam service-accounts list --filter="displayName='CockroachDB Backup Account'" --format="value(email.scope())" | head -n 1`
     gcloud iam service-accounts keys create key.json --iam-account $COCKROACHDB_BACKUP_EMAIl
 
 ### Grant the proper roles (roles/storage.objectCreator)
 
 Now grant the backup service account the ability to add items to Storage
+
     export PROJECT=$(gcloud info --format='value(config.project)')
 
     gcloud projects add-iam-policy-binding $PROJECT \

@@ -53,11 +53,11 @@ spec:
             - name: COCKROACH_URL
               value: postgresql://root@db-cockroachdb-public:26257?sslmode=disable
             - name: COCKROACH_DATABASE
-              value: gocall_production
+              value: 
             - name: GCP_BUCKET_NAME
               value: cockroach-backup-bucket
             - name: GCP_SA_USER
-              value: cockroach-backup-sa@go-call-io.iam.gserviceaccount.com
+              value:
             - name: COCKROACH_VERSION
               value: 2.0.6
             volumeMounts:
