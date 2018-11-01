@@ -12,43 +12,35 @@ spec:
           containers:
           - name: backup
             image: alpine:latest
-            command: >
-              apk add --no-cache --update curl \
-                bash \
-                ca-certificates \
-                wget \
-                python2 \
-                py2-openssl
+            command: ["/bin/sh","-c"]
+            args:
+              - |-
+                apk add --no-cache --update curl bash ca-certificates wget python2 py2-openssl;
+                wget https://dl.google.com/dl/cloudsdk/channels/rapid/google-cloud-sdk.tar.gz;
+                tar -xvf google-cloud-sdk.tar.gz;
+                rm google-cloud-sdk.tar.gz;
+                google-cloud-sdk/install.sh --usage-reporting=false --path-update=false --bash-completion=false;
 
-              wget https://dl.google.com/dl/cloudsdk/channels/rapid/google-cloud-sdk.tar.gz
-              tar -xvf google-cloud-sdk.tar.gz
-              rm google-cloud-sdk.tar.gz
-              google-cloud-sdk/install.sh --usage-reporting=false \
-                --path-update=false \
-                --bash-completion=false
+                wget -qO- https://binaries.cockroachdb.com/cockroach-v${COCKROACH_VERSION}.linux-musl-amd64.tgz | tar  xvz;
+                cp -i cockroach-v${COCKROACH_VERSION}.linux-musl-amd64/cockroach /;
+                chmod +x /cockroach;
 
-              wget -qO- https://binaries.cockroachdb.com/cockroach-v${COCKROACH_VERSION}.linux-musl-amd64.tgz | tar  xvz
-              cp -i cockroach-v${COCKROACH_VERSION}.linux-musl-amd64/cockroach /
-              chmod +x /cockroach
+                date=`date +%Y-%m-%d.%H.%M.%S`;
+                file="${date}-${COCKROACH_DATABASE}.sql";
 
-              date=`date +%Y-%m-%d.%H.%M.%S`
-              file="${date}-${COCKROACH_DATABASE}.sql"
+                cat /google-cloud-sdk/path.bash.inc;
 
-              cat /google-cloud-sdk/path.bash.inc
+                url="https://storage.googleapis.com/${GCP_BUCKET_NAME}/${file}";
 
-              url="https://storage.googleapis.com/${GCP_BUCKET_NAME}/${file}"
+                echo "Dumping database";
+                /cockroach dump ${COCKROACH_DATABASE} --url ${COCKROACH_URL} > "/tmp/${file}";
+                echo "Dump completed.  Uploading /tmp/${file} to ${url}";
 
-              echo "Dumping database"
-              /cockroach dump ${COCKROACH_DATABASE} --url ${COCKROACH_URL} > "/tmp/${file}"
-              echo "Dump completed.  Uploading /tmp/${file} to ${url}"
+                echo "Generating GCP token...";
+                /google-cloud-sdk/bin/gcloud auth activate-service-account "${GCP_SA_USER}" --key-file=/gcp/key.json;
 
-              echo "Generating GCP token..."
-              /google-cloud-sdk/bin/gcloud auth activate-service-account "${GCP_SA_USER}" --key-file=/gcp/key.json
-
-              cat "/tmp/${file}"
-              curl -v --upload-file "/tmp/${file}" \
-                -H "Authorization: Bearer `/google-cloud-sdk/bin/gcloud auth print-access-token ${GCP_SA_USER}`" \
-                "${url}"
+                cat "/tmp/${file}";
+                curl -v --upload-file "/tmp/${file}" -H "Authorization: Bearer `/google-cloud-sdk/bin/gcloud auth print-access-token ${GCP_SA_USER}`" "${url}";
             env:
             - name: COCKROACH_URL
               value: postgresql://root@db-cockroachdb-public:26257?sslmode=disable
